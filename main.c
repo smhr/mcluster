@@ -122,7 +122,7 @@ int main (int argv, char **argc) {
 	double extstart = 0.0;			//delay time for start of gas expulsion [Myr]
 
 	//Code parameters
-	int code = 3;					//Nbody version: =0 Nbody6, =1 Nbody4, =2 Nbody6 custom, =3 only create output list of stars, =4 Nbody7 (not yet fully functional), =5 Nbody6++GPU
+	int code = 3;					//Nbody version: =0 Nbody6, =1 Nbody4, =2 Nbody6 custom, =3 only create output list of stars, =4 Nbody7 (not yet fully functional), =5 Nbody6++GPU, =6 Nbody6 isothermal Galaxy (to be similar with MOCCA)
 	unsigned int seed = 0;			//Number seed for random number generator; =0 for randomization by local time
 	char *output = "test";   		//Name of output files
 	double dtadj = 1.0;				//DTADJ [N-body units (Myr in Nbody6 custom)], energy-check time step
@@ -296,7 +296,7 @@ int main (int argv, char **argc) {
 	int sse;								//(evolved stellar population yes/no)
 	double submass[MAX_AN], subcount[MAX_AN], norm[MAX_AN], N_tmp, M_tmp; //mass function parameters for mfunc = 2
 	double Rh2D, Rh3D;						//actual 2D/3D half-mass radius of the model
-	double M1spherical = 0.0;						//Spherical Galaxy mass for MOCCA
+	double M1isothermal = 0.0;						//Spherical Galaxy mass for MOCCA
 
 	if (profile == 3) Rh = a; //set half-mass radius temporarily to scale radius for computation of escape velocity
 
@@ -589,9 +589,9 @@ int main (int argv, char **argc) {
 		omega = sqrt(VG[0]*VG[0]+VG[1]*VG[1]+VG[2]*VG[2])/sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2]);
 		rtide = pow(G*M/(2.0*omega*omega),1.0/3.0);
 	} else if (tf == 4) {
-		//in the case of spherical galaxy for MOCCA
-		M1spherical = pow(sqrt(VG[0]*VG[0]+VG[1]*VG[1]+VG[2]*VG[2]),2.0)*sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2])/G;
-		rtide = pow(1.0*M/(3.0*M1spherical),1.0/3.0)*sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2]);
+		//in the case of isothermal galaxy for MOCCA
+		M1isothermal = pow(sqrt(VG[0]*VG[0]+VG[1]*VG[1]+VG[2]*VG[2]),2.0)*sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2])/G;
+		rtide = pow(1.0*M/(3.0*M1isothermal),1.0/3.0)*sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2]);
 	} else if (!tf) {
 		rtide = 1.0E5;
 	} else if ((tf == 1) && (code == 0 || code == 4 || code == 5)) {
@@ -1029,7 +1029,7 @@ int main (int argv, char **argc) {
 	printf("\n\n-----OUTPUT-----      \n");
 
 	if (code == 0)
-		output0(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart, M1spherical);
+		output0(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart);
 	else if (code == 1)
 		output1(output, N, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, Z, nbin, Q, RG, VG, rtide, gpu, star);
 	else if (code == 2)
@@ -1040,6 +1040,8 @@ int main (int argv, char **argc) {
 		output4(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart);
 	else if (code == 5)
 		output5(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart);
+	else if (code == 6)
+		output0(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart, M1isothermal);
 
 
 
@@ -4507,7 +4509,7 @@ int radial_profile(double **star, int N, double rvir, double M, int create_radia
 
 
 	//estimate NNBMAX and RS0 (Nbody6 only)
-	if ((code == 0) || (code == 2) || code == 4 || (code == 5)) {
+	if ((code == 0) || (code == 2) || code == 4 || (code == 5) || (code == 6)) {
 		*NNBMAX = 2.0*sqrt(N);
 		if (*NNBMAX < 30) *NNBMAX = 30;
 		if (N<=*NNBMAX) *NNBMAX = 0.5*N;
@@ -4600,7 +4602,7 @@ int cmd(double **star, int l, double Rgal, double *abvmag, double *vmag, double 
 	return 0;
 }
 
-int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart, double M1spherical){
+int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart, double M1isothermal){
 
 	//Open output files
 	char PARfile[50], NBODYfile[50], SSEfile[50];
@@ -4633,7 +4635,7 @@ int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	if (tf == 2) {
 		fprintf(PAR,"%.8e %.8f\n",M1pointmass,sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2])/1000.0);
 	} else if (tf == 4) {
-		fprintf(PAR,"%.8e %.8f\n",M1spherical,sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2])/1000.0);
+		fprintf(PAR,"%.8e %.8f\n",M1isothermal,sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2])/1000.0);
 	} else if (tf == 3) {
 		//old version:
 		//fprintf(PAR,"%.6e %.6e %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",M1allen,M2allen,a2allen,b2allen,VCIRC,RCIRC,RG[0]/1000.0,RG[1]/1000.0,RG[2]/1000.0,VG[0],VG[1],VG[2]);
@@ -5011,6 +5013,66 @@ int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	} else {
 		printf("\nData written to %s and %s\n", PARfile, NBODYfile);
 	}
+	return 0;
+
+}
+
+int output6(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart, double M1isothermal){
+
+	//Open output files
+	char PARfile[50], NBODYfile[50], SSEfile[50];
+	FILE *PAR, *NBODY, *SSE12;
+	sprintf(PARfile, "%s.input",output);
+	PAR = fopen(PARfile,"w");
+	sprintf(NBODYfile, "%s.fort.10",output);
+	NBODY = fopen(NBODYfile,"w");
+
+	int hrplot = 0;
+	if (dtplot) hrplot = 1;
+	if (sse) {
+		sprintf(SSEfile, "%s.fort.12",output);
+		SSE12 = fopen(SSEfile,"w");
+		hrplot = 2;
+	}
+
+	//write to .PAR file
+	fprintf(PAR,"1 5000000.0 0\n");
+	fprintf(PAR,"%i 1 10 %i %i 1\n",N,seed,NNBMAX);
+	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f 1.0E-03 %.8f %.8f\n",RS0,dtadj,dtout,tcrit,rvir,mmean);
+	fprintf(PAR,"2 2 1 0 1 0 2 0 0 2\n");
+	fprintf(PAR,"0 %i 0 %i 2 %i %i 0 %i 3\n",hrplot,tf,regupdate,etaupdate,mloss);
+	fprintf(PAR,"0 %i %i 0 0 2 0 1 0 1\n",bin,esc); // kz(25)=0 to not include WD kikc
+	fprintf(PAR,"0 0 0 2 1 0 0 2 0 3\n");
+	fprintf(PAR,"0 0 0 0 0 0 0 0 0 0\n");
+	fprintf(PAR,"1.0E-5 1.0E-4 0.2 1.0 1.0E-06 0.001\n");
+	fprintf(PAR,"2.350000 %.8f %.8f %i 0 %.8f %.8f %.8f\n",MMAX,mlow,nbin,Z,epoch,dtplot);
+	fprintf(PAR,"%.2f 0.0 0.0 0.00000 0.125\n",Q);
+	if (tf == 4) {
+		fprintf(PAR,"%.8e %.8f\n",M1isothermal,sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2])/1000.0);
+	
+	//write to .fort.10 file
+	int j;
+	for (j=0;j<N;j++) {
+		fprintf(NBODY,"%.16lf\t%.16lf %.16lf %.16lf\t%.16lf %.16lf %.16lf\n",star[j][0],star[j][1],star[j][2],star[j][3],star[j][4],star[j][5],star[j][6]);
+	}
+
+	//write to .fort.12 file
+	if (sse) {
+		for (j=0;j<N;j++) {
+			fprintf(SSE12,"%.8lf\t%.0lf %.8lf %.8lf %.8lf\n",star[j][0]*M,star[j][8],star[j][7],star[j][9],star[j][10]);
+			//,star[j][13],star[j][14]);
+		}
+	}
+
+	fclose(PAR);
+	fclose(NBODY);
+	if (bin == 5) {
+		fclose(SSE12);
+		printf("\nData written to %s, %s and %s\n", PARfile, NBODYfile, SSEfile);
+	} else {
+		printf("\nData written to %s and %s\n", PARfile, NBODYfile);
+	}
+
 	return 0;
 
 }

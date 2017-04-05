@@ -588,10 +588,11 @@ int main (int argv, char **argc) {
 		//in the case of Allen & Santillan potential, assume kappa = 1.4omega (eq. 9 in Kuepper et al. 2010)
 		omega = sqrt(VG[0]*VG[0]+VG[1]*VG[1]+VG[2]*VG[2])/sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2]);
 		rtide = pow(G*M/(2.0*omega*omega),1.0/3.0);
-	} else if (tf == 4) {
+	} else if (tf == 4 && code == 6) {
 		//in the case of isothermal galaxy for MOCCA
 		M1isothermal = pow(sqrt(VG[0]*VG[0]+VG[1]*VG[1]+VG[2]*VG[2]),2.0)*sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2])/G;
 		rtide = pow(1.0*M/(3.0*M1isothermal),1.0/3.0)*sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2]);
+		printf("\nIsothermal galaxy mass: %g solar mass at RG: %g kpc\n", M1isothermal, sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2])/1000.);
 	} else if (!tf) {
 		rtide = 1.0E5;
 	} else if ((tf == 1) && (code == 0 || code == 4 || code == 5)) {
@@ -776,7 +777,7 @@ int main (int argv, char **argc) {
 		printf("Dynamical temperature of centre-of-mass particles kT = %lf\n\n",ke);
 
 		//make half-mass radius of the system match the desired one
-		radial_profile(star, N, rvir, M, 0, 0, code, &NNBMAX, &RS0, &Rh2D, &Rh3D, NNBMAX_NBODY6);
+		radial_profile(star, N, rvir, M, 0, 0, code, &NNBMAX, &RS0, &Rh2D, &Rh3D, NNBMAX_NBODY6, S);
 		if (match) {
 			printf("\nmeasuring half-mass radius: %.7f \t %.7f (should/is)\nand correcting for this factor\n",Rh, Rh3D);
 			rvir = rvir *Rh/Rh3D;
@@ -835,7 +836,7 @@ int main (int argv, char **argc) {
 		printf("Dynamical temperature of centre-of-mass particles kT = %lf\n\n",ke);
 
 		//make half-mass radius of the system match the desired one
-		radial_profile(star, N, rvir, M, 0, 0, code, &NNBMAX, &RS0, &Rh2D, &Rh3D, NNBMAX_NBODY6);
+		radial_profile(star, N, rvir, M, 0, 0, code, &NNBMAX, &RS0, &Rh2D, &Rh3D, NNBMAX_NBODY6, S);
 		if (match) {
 			printf("\nmeasuring half-mass radius: %.7f \t %.7f (should/is)\nand correcting for this factor\n",Rh, Rh3D);
 			rvir = rvir *Rh/Rh3D;
@@ -860,7 +861,7 @@ int main (int argv, char **argc) {
 		ke /= 0.5*N;
 		printf("Dynamical temperature of centre-of-mass particles kT = %lf\n\n",ke);
 		//make half-mass radius of the system match the desired one
-		radial_profile(star, N, rvir, M, 0, 0, code, &NNBMAX, &RS0, &Rh2D, &Rh3D, NNBMAX_NBODY6);
+		radial_profile(star, N, rvir, M, 0, 0, code, &NNBMAX, &RS0, &Rh2D, &Rh3D, NNBMAX_NBODY6, S);
 		printf("\nmeasuring half-mass radius: %.7f \t %.7f (should/is)\nand correcting for this factor\n",Rh, Rh3D);
 		rvir = rvir *Rh/Rh3D;
 	}
@@ -868,7 +869,7 @@ int main (int argv, char **argc) {
 
 
 	//Calculate radial density profile, estimate NNBMAX and RS0 (important for Nbody6 only)
-	radial_profile(star, N, rvir, M, create_radial_profile, create_cumulative_profile, code, &NNBMAX, &RS0, &Rh2D, &Rh3D, NNBMAX_NBODY6);
+	radial_profile(star, N, rvir, M, create_radial_profile, create_cumulative_profile, code, &NNBMAX, &RS0, &Rh2D, &Rh3D, NNBMAX_NBODY6, S);
 	printf("\nActual half-mass radius of the cluster = (%.4f / %.4f) pc (3D / 2D)\n", Rh3D, Rh2D);
 
 	//scale RS0 to nbody units for Nbody6
@@ -1041,7 +1042,7 @@ int main (int argv, char **argc) {
 	else if (code == 5)
 		output5(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart);
 	else if (code == 6)
-		output0(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart, M1isothermal);
+		output6(output, N, NNBMAX, RS0, dtadj, dtout, tcrit, rvir, mmean, tf, regupdate, etaupdate, mloss, bin, esc, M, mlow, mup, MMAX, epoch, dtplot, Z, nbin, Q, RG, VG, rtide, gpu, star, sse, seed, extmass, extrad, extdecay, extstart, M1isothermal);
 
 
 
@@ -4370,7 +4371,7 @@ int eigenevolution(double *m1, double *m2, double *ecc, double *abin){
 	return 0;
 }
 
-int radial_profile(double **star, int N, double rvir, double M, int create_radial_profile, int create_cumulative_profile, int code, int *NNBMAX, double *RS0, double *Rh2D, double *Rh3D, int NNBMAX_NBODY6) {
+int radial_profile(double **star, int N, double rvir, double M, int create_radial_profile, int create_cumulative_profile, int code, int *NNBMAX, double *RS0, double *Rh2D, double *Rh3D, int NNBMAX_NBODY6, double S) {
 	int i, j;
 	*Rh2D = 0.0;
 	*Rh3D = 0.0;
@@ -4514,7 +4515,10 @@ int radial_profile(double **star, int N, double rvir, double M, int create_radia
 		if (*NNBMAX < 30) *NNBMAX = 30;
 		if (N<=*NNBMAX) *NNBMAX = 0.5*N;
 		if (*NNBMAX > NNBMAX_NBODY6) *NNBMAX = NNBMAX_NBODY6;
-		*RS0 = rarray[*NNBMAX][0];
+		if (S>=0.9) {
+		  *NNBMAX = *NNBMAX-100; // reduce NNBMAX
+		}
+	  	*RS0 = rarray[*NNBMAX][0];
 		printf("\nEstimating appropriate NNBMAX = %i and RS0 = %f [pc]\n",*NNBMAX,*RS0);
 	}
 
@@ -4602,7 +4606,7 @@ int cmd(double **star, int l, double Rgal, double *abvmag, double *vmag, double 
 	return 0;
 }
 
-int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart, double M1isothermal){
+int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dtout, double tcrit, double rvir, double mmean, int tf, int regupdate, int etaupdate, int mloss, int bin, int esc, double M, double mlow, double mup, double MMAX, double epoch, double dtplot, double Z, int nbin, double Q, double *RG, double *VG, double rtide, int gpu, double **star, int sse, int seed, double extmass, double extrad, double extdecay, double extstart){
 
 	//Open output files
 	char PARfile[50], NBODYfile[50], SSEfile[50];
@@ -4634,9 +4638,7 @@ int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	fprintf(PAR,"%.2f 0.0 0.0 0.00000 0.125\n",Q);
 	if (tf == 2) {
 		fprintf(PAR,"%.8e %.8f\n",M1pointmass,sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2])/1000.0);
-	} else if (tf == 4) {
-		fprintf(PAR,"%.8e %.8f\n",M1isothermal,sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2])/1000.0);
-	} else if (tf == 3) {
+	}  else if (tf == 3) {
 		//old version:
 		//fprintf(PAR,"%.6e %.6e %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",M1allen,M2allen,a2allen,b2allen,VCIRC,RCIRC,RG[0]/1000.0,RG[1]/1000.0,RG[2]/1000.0,VG[0],VG[1],VG[2]);
 
@@ -4644,7 +4646,7 @@ int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 		fprintf(PAR,"%.6e %.6e %.6f %.6f %.6f %.6f %.6e %.6f %.6f\n",M1allen,M2allen,a2allen,b2allen,VCIRC,RCIRC, GMB, AR, GAM);
 		fprintf(PAR,"%.6f %.6f %.6f %.6f %.6f %.6f\n", RG[0]/1000.0,RG[1]/1000.0,RG[2]/1000.0,VG[0],VG[1],VG[2]);
 	}
-	if (tf > 2 && tf != 4)	fprintf(PAR,"%.6f %.6f %.6f %.6f\n",extmass,extrad,extdecay,extstart);
+	if (tf > 2)	fprintf(PAR,"%.6f %.6f %.6f %.6f\n",extmass,extrad,extdecay,extstart);
 
 
 
@@ -5040,7 +5042,7 @@ int output6(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	fprintf(PAR,"%i 1 10 %i %i 1\n",N,seed,NNBMAX);
 	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f 1.0E-03 %.8f %.8f\n",RS0,dtadj,dtout,tcrit,rvir,mmean);
 	fprintf(PAR,"2 2 1 0 1 0 2 0 0 2\n");
-	fprintf(PAR,"0 %i 0 %i 2 %i %i 0 %i 3\n",hrplot,tf,regupdate,etaupdate,mloss);
+	fprintf(PAR,"0 %i 0 2 2 %i %i 0 %i 3\n",hrplot,regupdate,etaupdate,mloss); // kz(14)=2, because we can consider galaxy as a point-mass
 	fprintf(PAR,"0 %i %i 0 0 2 0 1 0 1\n",bin,esc); // kz(25)=0 to not include WD kikc
 	fprintf(PAR,"0 0 0 2 1 0 0 2 0 3\n");
 	fprintf(PAR,"0 0 0 0 0 0 0 0 0 0\n");
@@ -5049,6 +5051,7 @@ int output6(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	fprintf(PAR,"%.2f 0.0 0.0 0.00000 0.125\n",Q);
 	if (tf == 4) {
 		fprintf(PAR,"%.8e %.8f\n",M1isothermal,sqrt(RG[0]*RG[0]+RG[1]*RG[1]+RG[2]*RG[2])/1000.0);
+	}
 	
 	//write to .fort.10 file
 	int j;

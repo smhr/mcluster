@@ -557,6 +557,38 @@ int main (int argv, char **argc) {
 	int Nseg = ceil(N*mmeancom/mlowest);  //number of necessary pos & vel pairs for Baumgardt et al. (2008) mass segregation routine
 	int Nunseg = N;
 
+    if(Nseg>NMAX) {
+        double **startemp = star;
+        star = (double **)calloc(Nseg,sizeof(double *));
+        for (j=0;j<Nseg;j++){
+            star[j] = (double *)calloc(columns,sizeof(double));
+            if (star[j] == NULL) {
+                printf("\nMemory allocation failed!\n");
+                return 0;
+            }
+        }
+        for (i=0;i<N;i++) {
+            //star[i][0] = star_temp[i][0]/M;
+            star[i][0] = star_temp[i][0];
+            star[i][1] = star_temp[i][1];
+            star[i][2] = star_temp[i][2];
+            star[i][3] = star_temp[i][3];
+            star[i][4] = star_temp[i][4];
+            star[i][5] = star_temp[i][5];
+            star[i][6] = star_temp[i][6];
+            star[i][7] = star_temp[i][7];
+            star[i][8] = star_temp[i][8];
+            star[i][9] = star_temp[i][9];
+            star[i][10] = star_temp[i][10];
+            star[i][11] = star_temp[i][11];
+            star[i][12] = star_temp[i][12];
+            star[i][13] = star_temp[i][13];
+            star[i][14] = star_temp[i][14];
+        }
+        for (j=0;j<NMAX;j++) free (star_temp[j]);
+        free(star_temp);
+    }
+
 	double *Mcum;
 	Mcum = (double *)calloc(N,sizeof(double));
 		

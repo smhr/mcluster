@@ -82,12 +82,13 @@ int main (int argv, char **argc) {
 	double VG[3] = {0.0,220.0,0.0};  //Initial velocity of the cluster [km/s]
 	
 	//Mass function parameters
-	int mfunc = 1;					//0 = single mass stars; 1 = use Kroupa (2001) mass function; 2 = use multi power law (based on mufu.c by L.Subr)
+	int mfunc = 1;					//0 = single mass stars; 1 = use Kroupa (2001) mass function; 2 = use multi power law (based on mufu.c by L.Subr); 3 = optimal sampling; 4 L3 IMF (Naschberger 2012); 5 Varying alpha3 based on metellicity and density (Marks & Kroupa 2012);
 	double single_mass = 1.0;		//Stellar mass in case of single-mass cluster 
 	double mlow = 0.08;				//Lower mass limit for mfunc = 1 & mfunc = 4
-	double mup = 100.0;				//Upper mass limit for mfunc = 1 & mfunc = 4
+	double mup = 150.0;				//Upper mass limit for mfunc = 1 & mfunc = 4
 	double alpha[MAX_AN] = {-1.35, -2.35, -2.7, 0.0, 0.0};		//alpha slopes for mfunc = 2
 	double mlim[MAX_MN] = {0.08, 0.5, 4.0, 100.0, 0.0, 0.0};	//mass limits for mfunc = 2
+    double epsilon = 1.0/3.0;       //M_ecl/M_cl (M_cl is M_ecl + M_gas) 
 	double alpha_L3 = 2.3;			//alpha slope for mfunc = 4 (L3 mass function, Maschberger 2012)
 	double beta_L3 = 1.4;			//beta slope for mfunc = 4
 	double mu_L3 = 0.2;				//mu parameter for mfunc = 4
@@ -186,7 +187,7 @@ int main (int argv, char **argc) {
 
 	//Command line input
 	int option;
-	while ((option = getopt(argv, argc, "N:M:P:W:R:r:c:g:S:D:T:Q:C:A:O:G:o:f:a:m:B:b:p:s:t:e:Z:X:x:V:u:h:?")) != -1) switch (option)
+	while ((option = getopt(argv, argc, "N:M:P:W:R:r:c:g:S:D:T:Q:C:A:O:G:o:f:a:m:E:B:b:p:s:t:e:Z:X:x:V:u:h:?")) != -1) switch (option)
 	{
 		case 'N': N = atoi(optarg); Mcl = 0.0; break;
 		case 'M': Mcl = atof(optarg); N = 0; break;
@@ -224,6 +225,7 @@ int main (int argv, char **argc) {
 				mn++; 
 				break;
 			} else { printf("\nError: Number of mass params exceded maximum limit of %d\n", MAX_MN); return 1; }
+        case 'E': epsilon = atof(optarg); break;
 		case 'B': nbin = atoi(optarg); break;
 		case 'b': fbin = atof(optarg); break;
 		case 'p': pairing = atoi(optarg); break;
@@ -451,6 +453,45 @@ int main (int argv, char **argc) {
 		printf("\nMaximum stellar mass set to: %.2f\n", MMAX);
 		printf("\nUsing L3 IMF (Maschberger 2012)\n");
 		generate_m4(&N, star, alpha_L3, beta_L3, mu_L3, mlow, mup, &M, &mmean, MMAX, Mcl, epoch, Z, Rh, remnant);		
+    } else if (mfunc == 5) {
+		printf("\nMaximum stellar mass set to: %.2f\n", MMAX);
+
+        mlim[0] = 0.08;
+        mlim[1] = 0.5;
+        mlim[2] = 1.0;
+        mlim[3] = 150.0;
+        mlim[4] = mlim[5] = 0;
+
+        alpha[0] = -1.3;
+        alpha[1] = -2.3;
+        alpha[2] = -2.35;
+
+        double ep4 = epsilon*epsilon*epsilon*epsilon;
+        // assume r_ecl,h = r_cl,h * M_cl/M_ecl = r_ch,h/e
+        double density = 0.5*Mcl/(4.0/3.0*PI*Rh*Rh*Rh)/ep4;
+        FeH = log10(Z/Zsun)/0.977;
+        // use Marks & Kroupa (2012) formula 15         
+        alpha[3] = - (0.0572 * FeH - 0.4072*log10(density*1e-6)+1.9383);
+        if(alpha[3]<-2.35) alpha[3] = -2.35;
+        alpha[4] = 0.0;
+
+        printf("\n Mass function: \n");
+        for (i = 0; i<4; i++) 
+            printf("\n alpha[%d] = %f for %f < m < %f", alpha[i],mlim[i],mlim[i+1]);
+        printf("\n [Fe/H] = %f, cloud density [M_sun/pc^3] = %f, epsilon = %f \n", FeH, density,epsilon);
+
+        an = 4;
+        norm[an-1] = 1.; //normalization factor of integral
+        N_tmp = subcount[an-1] = subint(mlim[an-1], mlim[an], alpha[an-1] + 1.); //integrated number of stars in interval [mlim[an-1]:mlim[an]]
+        M_tmp = submass[an-1] = subint(mlim[an-1], mlim[an], alpha[an-1] + 2.); //integrated mass of stars in interval [mlim[an-1]:mlim[an]]
+        for (i = an - 2; i >= 0; i--) {
+            norm[i] = norm[i+1] * pow(mlim[i+1], alpha[i+1] - alpha[i]);
+            subcount[i] = norm[i] * subint(mlim[i], mlim[i+1], alpha[i] + 1.);
+            N_tmp += subcount[i];
+            submass[i] = norm[i] * subint(mlim[i], mlim[i+1], alpha[i] + 2.);
+            M_tmp += submass[i];
+        }
+        generate_m2(an, mlim, alpha, Mcl, M_tmp, subcount, &N, &mmean, &M, star, MMAX, epoch, Z, Rh, remnant);
 	} else {
 		printf("\nSetting stellar masses to %.1f solar mass\n", single_mass);
 		if (!N) N = Mcl/single_mass;
@@ -5247,13 +5288,15 @@ void help(double msort) {
 	printf("       -G <0|1> (GPU usage; 0= no GPU, 1= use GPU)                   \n");
 	printf("       -o <name> (output name of cluster model)                      \n");
 	printf("       -f <0|1|2|3|4> (IMF; 0= no IMF, 1= Kroupa (2001),             \n");
-	printf("             2= user defined, 3= Kroupa (2001) with optimal sampling,\n");
-	printf("             4= L3 IMF (Maschberger 2012))                           \n");
+	printf("            2= user defined, 3= Kroupa (2001) with optimal sampling, \n");
+	printf("            4= L3 IMF (Maschberger 2012))                            \n");
+    printf("            5= alpha3 depending on environment (Marks & Kroupa 2012))\n");
 	printf("       -a <value> (IMF slope; for user defined IMF, may be used      \n"); 
 	printf("                   multiple times, from low mass to high mass;       \n");
 	printf("                   for L3 IMF use three times for alpha, beta and mu)\n");
 	printf("       -m <value> (IMF mass limits, has to be used multiple times    \n");
 	printf("                 (at least twice), from low mass to high mass [Msun])\n");
+    printf("       -E <value> ( M_ecl/(M_ecl+M_gas), used for IMF option -f 5)   \n");
 	printf("       -B <number> (number of binary systems)                        \n");
 	printf("       -b <value> (binary fraction, specify either B or b)           \n");
 	printf("       -p <0|1|2|3> (binary pairing, 0= random, 1= ordered for M>%.1f Msun,\n",msort);

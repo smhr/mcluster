@@ -143,7 +143,7 @@ int main (int argv, char **argc) {
 	int create_cumulative_profile = 1;	//Creates a radial cumulative profile and prints it to the screen; =0 off, =1 on
 	double Rgal = 10000.0;			//Distance of cluster from sun for artificial CMD with observational errors [pc] 
 	double Zsun = 0.02;				//Solar metallicity
-	int NNBMAX_NBODY6 = 500;		//Maximum number of neighbours allowed in NBODY6
+	int NNBMAX_NBODY6 = 200;		//Maximum number of neighbours allowed in NBODY6
 	double upper_IMF_limit = 150.0; //Maximum stellar mass allowed in McLuster [Msun]
 	int an = 0;						//Counter for number of alpha slopes for mfunc = 2
 	int mn = 0;						//Counter for number of mass limits for mfunc = 1, 2 & 4
@@ -558,7 +558,7 @@ int main (int argv, char **argc) {
 	int Nunseg = N;
 
     if(Nseg>NMAX) {
-        double **startemp = star;
+        double **star_temp = star;
         star = (double **)calloc(Nseg,sizeof(double *));
         for (j=0;j<Nseg;j++){
             star[j] = (double *)calloc(columns,sizeof(double));
@@ -595,10 +595,15 @@ int main (int argv, char **argc) {
 	if ((S) && !(profile == 2)) {//sort masses when mass segregation parameter > 0
 		printf("\nApplying mass segregation with S = %f\n",S);
 		segregate(star, N, S);
-		for (i=0;i<N;i++) {//calculate cumulative mass function Mcum
-			Mcum[i] = 0.0;
-			for (j=0;j<=i;j++) Mcum[i] = Mcum[i] + star[j][0];
-		}
+        Mcum[0] = star[0][0];
+        for (i=1; i<N; i++) {
+            Mcum[i] = Mcum[i-1] + star[i][0];
+        }
+        // Suppress very low efficient N^2 sum...
+		//for (i=0;i<N;i++) {//calculate cumulative mass function Mcum
+		//    Mcum[i] = 0.0;
+		//    for (j=0;j<=i;j++) Mcum[i] = Mcum[i] + star[j][0];
+		//}
 		N = Nseg;
 	}
 	
@@ -4185,32 +4190,55 @@ int segregate(double **star, int N, double S){
 	j = 0;
 	int Ntemp,l;
 	Ntemp = N;
-	for (i=0;i<N;i++) {
-		j = 1.0*(1.0-pow(drand48(),1.0-S))*Ntemp;
-		l=-1;
-		do {
-			l++;
-			if (star_temp[l][0]) {
-				j++;
-			}
-		} while (l<j);
-		star_temp[j][0] = star[(int) masses[i][1]][0];
-		star_temp[j][1] = star[(int) masses[i][1]][1];
-		star_temp[j][2] = star[(int) masses[i][1]][2];
-		star_temp[j][3] = star[(int) masses[i][1]][3];
-		star_temp[j][4] = star[(int) masses[i][1]][4];
-		star_temp[j][5] = star[(int) masses[i][1]][5];
-		star_temp[j][6] = star[(int) masses[i][1]][6];
-		star_temp[j][7] = star[(int) masses[i][1]][7];
-		star_temp[j][8] = star[(int) masses[i][1]][8];
-		star_temp[j][9] = star[(int) masses[i][1]][9];
-		star_temp[j][10] = star[(int) masses[i][1]][10];
-		star_temp[j][11] = star[(int) masses[i][1]][11];
-		star_temp[j][12] = star[(int) masses[i][1]][12];
-		star_temp[j][13] = star[(int) masses[i][1]][13];
-		star_temp[j][14] = star[(int) masses[i][1]][14];
-		Ntemp--;
-	}	
+    // Fully mass segregated case, no need to random pick up
+    if(S==1.0) {
+        printf("Sorted mass\n");
+        for (i=0;i<N;i++) {
+            star_temp[i][0] = star[(int) masses[i][1]][0];
+            star_temp[i][1] = star[(int) masses[i][1]][1];
+            star_temp[i][2] = star[(int) masses[i][1]][2];
+            star_temp[i][3] = star[(int) masses[i][1]][3];
+            star_temp[i][4] = star[(int) masses[i][1]][4];
+            star_temp[i][5] = star[(int) masses[i][1]][5];
+            star_temp[i][6] = star[(int) masses[i][1]][6];
+            star_temp[i][7] = star[(int) masses[i][1]][7];
+            star_temp[i][8] = star[(int) masses[i][1]][8];
+            star_temp[i][9] = star[(int) masses[i][1]][9];
+            star_temp[i][10] = star[(int) masses[i][1]][10];
+            star_temp[i][11] = star[(int) masses[i][1]][11];
+            star_temp[i][12] = star[(int) masses[i][1]][12];
+            star_temp[i][13] = star[(int) masses[i][1]][13];
+            star_temp[i][14] = star[(int) masses[i][1]][14];
+        }
+    }
+    else{
+        for (i=0;i<N;i++) {
+            j = 1.0*(1.0-pow(drand48(),1.0-S))*Ntemp;
+            l=-1;
+            do {
+                l++;
+                if (star_temp[l][0]) {
+                    j++;
+                }
+            } while (l<j);
+            star_temp[j][0] = star[(int) masses[i][1]][0];
+            star_temp[j][1] = star[(int) masses[i][1]][1];
+            star_temp[j][2] = star[(int) masses[i][1]][2];
+            star_temp[j][3] = star[(int) masses[i][1]][3];
+            star_temp[j][4] = star[(int) masses[i][1]][4];
+            star_temp[j][5] = star[(int) masses[i][1]][5];
+            star_temp[j][6] = star[(int) masses[i][1]][6];
+            star_temp[j][7] = star[(int) masses[i][1]][7];
+            star_temp[j][8] = star[(int) masses[i][1]][8];
+            star_temp[j][9] = star[(int) masses[i][1]][9];
+            star_temp[j][10] = star[(int) masses[i][1]][10];
+            star_temp[j][11] = star[(int) masses[i][1]][11];
+            star_temp[j][12] = star[(int) masses[i][1]][12];
+            star_temp[j][13] = star[(int) masses[i][1]][13];
+            star_temp[j][14] = star[(int) masses[i][1]][14];
+            Ntemp--;
+        }
+    }
 	
 	//copying back to original array
 	for (i=0;i<N;i++) {
@@ -5066,10 +5094,10 @@ int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	fprintf(PAR,"1 5000000.0 %.16f 40 40 0\n",tcritp);
 	fprintf(PAR,"%i 1 10 %i %i 1 10\n",N,seed,NNBMAX);
 	fprintf(PAR,"0.02 0.02 %.8f %.8f %.8f %.8f %f %.16f %.16f\n",RS0,dtadj,dtout,tcrit*10.0,ecrit,rvir,mmean);
-	fprintf(PAR,"0 2 1 0 1 0 5 %i 3 2\n",(nbin>0?2:0));
+	fprintf(PAR,"0 1 1 0 1 0 5 %i 3 2\n",(nbin>0?2:0));
 	fprintf(PAR,"0 %i 0 %i 2 %i %i 0 %i 6\n",hrplot,tf,regupdate,etaupdate,mloss);
-	fprintf(PAR,"0 %i %i 0 1 2 1 0 0 1\n", (bin==-1?10:2),esc);
-	fprintf(PAR,"1 0 3 2 1 0 0 2 0 0\n");
+	fprintf(PAR,"0 %i %i 0 1 2 1 0 0 2\n", (bin==-1?10:2),esc);
+	fprintf(PAR,"1 0 3 2 1 0 0 2 2 0\n");
 	fprintf(PAR,"0 0 0 0 0 2 -3 0 0 0\n");
 	fprintf(PAR,"%f %f 0.2 1.0 %f 0.001 0.125\n",dtmin, rmin, gmin);
 	fprintf(PAR,"2.350000 %.8f %.8f %i 0 %.8f %.8f %.8f\n",MMAX,mlow,nbin,Z,epoch,dtplot);

@@ -45,6 +45,7 @@
 #include<string.h>
 #include<sys/stat.h>
 #include<getopt.h>
+#include<assert.h>
 #ifdef GPU
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -453,45 +454,52 @@ int main (int argv, char **argc) {
 		printf("\nMaximum stellar mass set to: %.2f\n", MMAX);
 		printf("\nUsing L3 IMF (Maschberger 2012)\n");
 		generate_m4(&N, star, alpha_L3, beta_L3, mu_L3, mlow, mup, &M, &mmean, MMAX, Mcl, epoch, Z, Rh, remnant);		
-    } else if (mfunc == 5) {
-		printf("\nMaximum stellar mass set to: %.2f\n", MMAX);
+	} else if (mfunc == 5) {
+                printf("\nMaximum stellar mass set to: %.2f\n", MMAX);
 
-        mlim[0] = 0.08;
-        mlim[1] = 0.5;
-        mlim[2] = 1.0;
-        mlim[3] = 150.0;
-        mlim[4] = mlim[5] = 0;
+		mlim[0] = 0.08;
+		mlim[1] = 0.5;
+		mlim[2] = 1.0;
+		mlim[3] = 150.0;
+		mlim[4] = mlim[5] = 0;
 
-        alpha[0] = -1.3;
-        alpha[1] = -2.3;
-        alpha[2] = -2.35;
+		double ep4 = epsilon*epsilon*epsilon*epsilon;
+		// assume r_ecl,h = r_cl,h * M_cl/M_ecl = r_ch,h/e
+		if(!Mcl) {
+		  fprintf(stderr,"\n Error: Mcl must be defined when Marks & Kroupa (2012) IMF variation is used!\n");
+		  abort();
+		}
+		double density = 0.5*Mcl/(4.0/3.0*PI*Rh*Rh*Rh)/ep4;
+		FeH = log10(Z/Zsun)/0.977;
+		// use Marks & Kroupa (2012) formula 15         
+		alpha[0] = -(2.3 + 0.5*FeH);
+		alpha[1] = -(2.35 + 0.5*FeH);
+		alpha[2] = - (0.0572 * FeH - 0.4072*log10(density*1e-6)+1.9383);
+		if(alpha[3]<-2.35) alpha[3] = -2.35;
+		alpha[3] = alpha[4] = 0.0;
 
-        double ep4 = epsilon*epsilon*epsilon*epsilon;
-        // assume r_ecl,h = r_cl,h * M_cl/M_ecl = r_ch,h/e
-        double density = 0.5*Mcl/(4.0/3.0*PI*Rh*Rh*Rh)/ep4;
-        FeH = log10(Z/Zsun)/0.977;
-        // use Marks & Kroupa (2012) formula 15         
-        alpha[3] = - (0.0572 * FeH - 0.4072*log10(density*1e-6)+1.9383);
-        if(alpha[3]<-2.35) alpha[3] = -2.35;
-        alpha[4] = 0.0;
+		an = 3;
+		mn = an + 1;
 
-        printf("\n Mass function: \n");
-        for (i = 0; i<4; i++) 
-            printf("\n alpha[%d] = %f for %f < m < %f", alpha[i],mlim[i],mlim[i+1]);
-        printf("\n [Fe/H] = %f, cloud density [M_sun/pc^3] = %f, epsilon = %f \n", FeH, density,epsilon);
+		printf("\n Mass function: \n");
+		for (i = 0; i<an; i++) 
+		  printf("\n alpha[%d] = %f for %f < m < %f", i, alpha[i],mlim[i],mlim[i+1]);
+		printf("\n [Fe/H] = %f, cloud density [M_sun/pc^3] = %f, epsilon = %f \n", FeH, density,epsilon);
 
-        an = 4;
-        norm[an-1] = 1.; //normalization factor of integral
-        N_tmp = subcount[an-1] = subint(mlim[an-1], mlim[an], alpha[an-1] + 1.); //integrated number of stars in interval [mlim[an-1]:mlim[an]]
-        M_tmp = submass[an-1] = subint(mlim[an-1], mlim[an], alpha[an-1] + 2.); //integrated mass of stars in interval [mlim[an-1]:mlim[an]]
-        for (i = an - 2; i >= 0; i--) {
-            norm[i] = norm[i+1] * pow(mlim[i+1], alpha[i+1] - alpha[i]);
-            subcount[i] = norm[i] * subint(mlim[i], mlim[i+1], alpha[i] + 1.);
-            N_tmp += subcount[i];
-            submass[i] = norm[i] * subint(mlim[i], mlim[i+1], alpha[i] + 2.);
-            M_tmp += submass[i];
-        }
-        generate_m2(an, mlim, alpha, Mcl, M_tmp, subcount, &N, &mmean, &M, star, MMAX, epoch, Z, Rh, remnant);
+		for (i = mn+1; i < MAX_MN; i++) mlim[i] = 0.0;
+		for (i = an+1; i < MAX_AN; i++) alpha[i] = 0.0;
+
+		norm[an-1] = 1.; //normalization factor of integral
+		N_tmp = subcount[an-1] = subint(mlim[an-1], mlim[an], alpha[an-1] + 1.); //integrated number of stars in interval [mlim[an-1]:mlim[an]]
+		M_tmp = submass[an-1] = subint(mlim[an-1], mlim[an], alpha[an-1] + 2.); //integrated mass of stars in interval [mlim[an-1]:mlim[an]]
+		for (i = an - 2; i >= 0; i--) {
+		  norm[i] = norm[i+1] * pow(mlim[i+1], alpha[i+1] - alpha[i]);
+		  subcount[i] = norm[i] * subint(mlim[i], mlim[i+1], alpha[i] + 1.);
+		  N_tmp += subcount[i];
+		  submass[i] = norm[i] * subint(mlim[i], mlim[i+1], alpha[i] + 2.);
+		  M_tmp += submass[i];
+		}
+		generate_m2(an, mlim, alpha, Mcl, M_tmp, subcount, &N, &mmean, &M, star, MMAX, epoch, Z, Rh, remnant);
 	} else {
 		printf("\nSetting stellar masses to %.1f solar mass\n", single_mass);
 		if (!N) N = Mcl/single_mass;
@@ -1442,6 +1450,8 @@ int generate_m2(int an, double *mlim, double *alpha, double Mcl, double M_tmp, d
 		if (star[i][0] > mostmassive) mostmassive = star[i][0];
 		*M += star[i][0];
 		if ((i==*N-1) && (*M<Mcl)) *N += 1;
+		assert(star[i][7]>=mlim[0]);
+		assert(star[i][7]<=mlim[an]);
 	}
 
 	if (lostremnants) printf("Number of ejected compact remnants: %i (%.1f Msun)\n", lostremnants, lostremnantsmass);
@@ -4014,7 +4024,7 @@ int order(double **star, int N, double M, double msort, int pairing){
                   k = k1;
                   //printf("mass_ratio(true,real): %f %f\n",mpair/masses[i][0], masses[k][0]/masses[i][0]);
                   if(dm/mpair>1e-2) 
-                      printf("Warning: dm too large: m1=%F, mp=%f, m2=%f, dm=%f, i=%d, k=%d\n",masses[i][0],mpair,masses[k][0],i,k);
+		    printf("Warning: dm too large: m1=%F, mp=%f, m2=%f, dm=%f, i=%d, k=%d\n",masses[i][0],mpair,masses[k][0],dm,i,k);
               }
               //printf("mpair =%f, k=%d, i=%d, mass[k]=%f\n",mpair,k,i,masses[k][0]);
 /*

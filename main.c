@@ -329,7 +329,11 @@ int main (int argv, char **argc) {
 	 ***********************/
 
 	int columns = 15;
-	const int NMAX = N*2>1500000?N*2:1500000;	     		//Maximum number of stars & orbits allowed in McLuster
+	int NMAX = N*2>1500000?N*2:1500000;	     		//Maximum number of stars & orbits allowed in McLuster
+	if(Mcl && (!N)) {
+	  NMAX = Mcl*3;
+	}
+	
 	double **star;
 	star = (double **)calloc(NMAX,sizeof(double *));
 	for (j=0;j<NMAX;j++){
@@ -444,7 +448,7 @@ int main (int argv, char **argc) {
 				submass[i] = norm[i] * subint(mlim[i], mlim[i+1], alpha[i] + 2.);
 				M_tmp += submass[i];
 			}
-			generate_m2(an, mlim, alpha, Mcl, M_tmp, subcount, &N, &mmean, &M, star, MMAX, epoch, Z, Rh, remnant);
+			generate_m2(an, mlim, alpha, Mcl, M_tmp, subcount, &N, &mmean, &M, star, MMAX, NMAX, epoch, Z, Rh, remnant);
 		}
  	} else if (mfunc == 3) {
 		printf("\nMaximum stellar mass set to: %.2f\n",MMAX);
@@ -499,7 +503,7 @@ int main (int argv, char **argc) {
 		  submass[i] = norm[i] * subint(mlim[i], mlim[i+1], alpha[i] + 2.);
 		  M_tmp += submass[i];
 		}
-		generate_m2(an, mlim, alpha, Mcl, M_tmp, subcount, &N, &mmean, &M, star, MMAX, epoch, Z, Rh, remnant);
+		generate_m2(an, mlim, alpha, Mcl, M_tmp, subcount, &N, &mmean, &M, star, MMAX, NMAX, epoch, Z, Rh, remnant);
 	} else {
 		printf("\nSetting stellar masses to %.1f solar mass\n", single_mass);
 		if (!N) N = Mcl/single_mass;
@@ -1348,7 +1352,7 @@ int generate_m1(int *N, double **star, double mlow, double mup, double *M, doubl
 	return 0;
 }
 
-int generate_m2(int an, double *mlim, double *alpha, double Mcl, double M_tmp, double *subcount, int *N, double *mmean, double *M, double **star, double MMAX, double epoch, double Z, double Rh, int remnant) {
+int generate_m2(int an, double *mlim, double *alpha, double Mcl, double M_tmp, double *subcount, int *N, double *mmean, double *M, double **star, double MMAX, int NMAX, double epoch, double Z, double Rh, int remnant) {
 	int i, j;
 
 	//set up parameters and variables for SSE (Hurley, Pols & Tout 2002)
@@ -1450,6 +1454,10 @@ int generate_m2(int an, double *mlim, double *alpha, double Mcl, double M_tmp, d
 		if (star[i][0] > mostmassive) mostmassive = star[i][0];
 		*M += star[i][0];
 		if ((i==*N-1) && (*M<Mcl)) *N += 1;
+		if(*N>NMAX) {
+		  fprintf(stderr,"Error! Total number of particles overflow, NMAX=%d, try to enlarge NMAX!\n",NMAX);
+		  abort();
+		}
 		assert(star[i][7]>=mlim[0]);
 		assert(star[i][7]<=mlim[an]);
 	}

@@ -106,7 +106,7 @@ int main (int argv, char **argc) {
 	double fbin = 0.0;				//Primordial binary fraction, number of binary systems = 0.5*N*fbin, only used when nbin is set to 0 
 	int pairing = 3;				//Pairing of binary components; 0= random pairing, 1= ordered pairing for components with masses M>msort, 2= random but separate pairing for components with masses m>Msort; 3= Use period distribution for M>msort from Sana et al. (2011,2012) and Oh et al. (2015).
 	double msort = 5.0;				//Stars with masses > msort will be sorted and preferentially paired into binaries if pairing = 1
-	int adis = 3;					//Semi-major axis distribution; 0= flat ranging from amin to amax, 1= based on Kroupa (1995) period distribution, 2= based on Duquennoy & Mayor (1991) period distribution, 3= based on Kroupa (1995) period distribution 
+	int adis = 1;					//Semi-major axis distribution; 0= flat ranging from amin to amax, 1= based on Kroupa (1995) period distribution, 2= based on Duquennoy & Mayor (1991) period distribution, 3= based on Kroupa (1995) period distribution 
 	int OBperiods = 2;				//1: Use period distribution for massive binaries with M_primary > msort from Sana & Evans (2011); 2: Uniform distribution of mass ratio (0.1<q<1.0) for m>Msort and random pairing for remaining (Kiminki & Kobulnicky 2012; Sana et al., 2012; Kobulnicky et al. 2014; Oh, S., Kroupa, P., & Pflamm-Altenburg, J. (2015) period distribution for M>Msort (implemented by Long Wang)
 	double amin = 0.0001;			//Minimum semi-major axis for adis = 0 [pc]
 	double amax = 0.01;				//Maximum semi-major axis for adis = 0 [pc]
@@ -153,6 +153,7 @@ int main (int argv, char **argc) {
 	int vn = 0;						//Counter for components of cluster velocity vector 
 	int xx = 0;						//Counter for external potential input parameters 
 	int gn = 0;						//Counter for EFF/Nuker profile parameters
+    int kn = 0;                     //Counter for semi-major axis limits for adis=0
 	double extgas[4];				//Input array for external potential parameters
 	
     feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
@@ -188,7 +189,7 @@ int main (int argv, char **argc) {
 
 	//Command line input
 	int option;
-	while ((option = getopt(argv, argc, "N:M:P:W:R:r:c:g:S:D:T:Q:C:A:O:G:o:f:a:m:E:B:b:p:s:t:e:Z:X:x:V:u:h:?")) != -1) switch (option)
+	while ((option = getopt(argv, argc, "N:M:P:W:R:r:c:g:S:D:T:Q:C:A:O:G:o:f:a:m:E:B:b:p:d:s:t:e:Z:X:x:V:u:h:?")) != -1) switch (option)
 	{
 		case 'N': N = atoi(optarg); Mcl = 0.0; break;
 		case 'M': Mcl = atof(optarg); N = 0; break;
@@ -226,10 +227,22 @@ int main (int argv, char **argc) {
 				mn++; 
 				break;
 			} else { printf("\nError: Number of mass params exceded maximum limit of %d\n", MAX_MN); return 1; }
-        case 'E': epsilon = atof(optarg); break;
+        case 'F': epsilon = atof(optarg); break;
 		case 'B': nbin = atoi(optarg); break;
 		case 'b': fbin = atof(optarg); break;
 		case 'p': pairing = atoi(optarg); break;
+        case 'd': adis = atoi(optarg); break;
+        case 'k':
+            if (kn == 0) {
+                amin = atof(optarg); break;
+                kn++;
+            }
+            else if(kn == 1) {
+                amax = atof(optarg); break;
+                kn++;
+            }
+            else {printf("\nError: Number of semi-major axis limits should be call only twice\n"); return 1; }
+        case 'E': OBperiods =atoi(optarg); break;
 		case 's': seed = atoi(optarg); break;
 		case 't': tf = atoi(optarg); break;
 		case 'e': epoch = atof(optarg); break;
@@ -1219,7 +1232,7 @@ int main (int argv, char **argc) {
  *************/
 
 int generate_m1(int *N, double **star, double mlow, double mup, double *M, double *mmean, double MMAX, double Mcl, double epoch, double Z, double Rh, int remnant) {
-	int ty, i;
+	int i;
 	double alpha1, alpha2, c1, c2, k1, k2, xx, mth;
 
 	//set up parameters and variables for SSE (Hurley, Pols & Tout 2002)
@@ -1262,7 +1275,7 @@ int generate_m1(int *N, double **star, double mlow, double mup, double *M, doubl
 	if (epoch) printf("\nEvolving stellar population for %.1f Myr.\n",epoch);
 	
 	//set up mass function parameters
-	ty = 2;   
+	//int ty = 2;   
 	alpha1 = 1.3;
 	alpha2 = 2.3;
 	
@@ -1996,12 +2009,12 @@ double r8_abs(double x) {
 
 int generate_plummer(int N, double **star, double rtide, double rvir, double D, int symmetry){
 	int i, h;
-	double a[9], ri, sx, sv, rcut;
+	double a[9], ri, sx, rcut;
 	double r_norm, v_norm;
 
 	//Scale length
 	sx = 1.5*TWOPI/16.0;
-	sv = sqrt(1.0/sx);
+	//sv = sqrt(1.0/sx);
 	
 	printf("Setting cut-off radius of Plummer sphere to approximate tidal radius\n");
 	rcut = rtide/(sx*rvir);		//cut-off radius for Plummer sphere = tidal radius in scaled length
@@ -2097,8 +2110,8 @@ int generate_king(int N, double W0, double **star, double *rvir, double *rh, dou
 	double ve, cg1;
 	double fmass, r2;
 	double costh, sinth, phi, r, xstar, ystar, zstar;
-	double w1, w, wj1, wj;
-	double vmax, speed, fstar, ustar, vstar, wstar, mstar;
+	double w1, w=0, wj1, wj;
+	double vmax, speed, fstar, ustar, vstar, wstar;
 	double ri;
 	
 	double **coord;
@@ -2285,6 +2298,8 @@ int generate_king(int N, double W0, double **star, double *rvir, double *rh, dou
 				}
 			} else {
 				printf("radius too big\n");
+                w =-1;
+                abort();
 			}
 		
 			vmax = sqrt(2.0*w);
@@ -2299,7 +2314,7 @@ int generate_king(int N, double W0, double **star, double *rvir, double *rh, dou
 			ustar = speed*sinth*cos(phi);
 			vstar = speed*sinth*sin(phi);
 			wstar = speed*costh;
-			mstar = star[i][0];
+			//mstar = star[i][0];
 		
 			//printf("i: %i\tr=%g\tm=%.5f\tx=%.5f y=%.5f z=%.5f\tvx=%.5f vy=%.5f vz=%.5f\n",i,sqrt(r2),mstar,xstar,ystar,zstar,ustar,vstar,wstar);
 		
@@ -3341,7 +3356,7 @@ double fractalize(double D, int N, double **star, int radial, int symmetry) {
 	star_temp[Nparent][6] = 0.0;//vz
 	Nparent++;
 	
-	
+	i = 0;
 	while (Nparent+i*8<Ntot) {
 		l /= 2.0;
 		i = 0;
@@ -3561,13 +3576,13 @@ double fractalize(double D, int N, double **star, int radial, int symmetry) {
 int get_binaries(int nbin, double **star, double M, double rvir, int pairing, int *N, int adis, double amin, double amax, double Rh, int eigen, int BSE, double epoch, double Z, int remnant, int OBperiods, double msort) {		
 	int i, j, k;
 	double m1, m2, ecc, abin;
-	double eccold, abinold, m1old, m2old;
+	double eccold;
 	double pmat[3][2], rop[2], vop[2], rrel[3], vrel[3];
 	double ea, mm, eadot, cosi, inc, peri, node;
-	double lP, P;	
+	double lP, P=-1.0;	
 	double u1, u2;
-	double q, p, x1, x2;	
-	double lP1, lP2, lPmean, lPsigma;
+	double q, p, x1;
+	double lP1, lPmean, lPsigma;
 
 	double zpars[20];     //metallicity parameters
 	double vkick[2];	 //kick velocity for compact remnants	
@@ -3632,7 +3647,7 @@ int get_binaries(int nbin, double **star, double M, double rvir, int pairing, in
 				if (!i) amin /= rvir;
 				if (!i) amax /= rvir;
 				abin = amin+drand48()*(amax-amin);
-			} else if (adis == 1 || adis == 3) {
+			} else if (adis == 1) {
 				//derive from Kroupa (1995) period distribution
 				if (!i) printf("\nDeriving semi-major axis distribution from Kroupa (1995) period distribution.\n");
 				double Pmin = 10, delta = 45, eta = 2.5; //parameters of Kroupa (1995) period distribution
@@ -3662,9 +3677,9 @@ int get_binaries(int nbin, double **star, double M, double rvir, int pairing, in
 
 				p = sqrt(-2.0*log(q)/q);
 				x1 = u1*p;
-				x2 = u2*p;
+				//x2 = u2*p;
 				lP1 = lPsigma*x1 + lPmean;
-				lP2 = lPsigma*x2 + lPmean;
+				//lP2 = lPsigma*x2 + lPmean;
 
 				P = pow(10,lP1);//days
 				P /= 365.25;//yr
@@ -3710,6 +3725,7 @@ int get_binaries(int nbin, double **star, double M, double rvir, int pairing, in
                 }
                 else if (OBperiods==2){
                     double Pmin=pow(10.0,0.15); // consistent with Sana et al. (2012)
+                    assert(P>0.0);
                     double elimit = 1.0 - pow((P*365.25/Pmin),-2.0/3.0);
                     do{
                         ecc = pow(drand48(), 1.0/0.55); // f=0.55ecc^(-0.45)
@@ -3724,9 +3740,9 @@ int get_binaries(int nbin, double **star, double M, double rvir, int pairing, in
 			
 			//Apply Kroupa (1995) eigenevolution
 			eccold = ecc;
-			abinold = abin;
-			m1old = m1;
-			m2old = m2;
+			//abinold = abin;
+			//m1old = m1;
+			//m2old = m2;
 			if (eigen) {
 				if (!i) printf("\nApplying Kroupa (1995) eigenevolution for short-period binaries\n");
 				m1*=M;//temporary re-scaling
@@ -3937,7 +3953,7 @@ void shellsort_reverse_1d(double *array, int N) {//smallest up
 
 int order(double **star, int N, double M, double msort, int pairing){
 	int i,j;
-	int Nhighmass;
+	int Nhighmass=-1;
 	int columns = 15;
 	double **star_temp;
 	star_temp = (double **)calloc(N,sizeof(double *));
@@ -4213,7 +4229,10 @@ int order(double **star, int N, double M, double msort, int pairing){
 	for (j=0;j<N;j++) free (star_temp[j]);
 	free(star_temp);
 
-	if (pairing==2) segregate(star, Nhighmass, 0.0);
+	if (pairing==2) {
+        assert(Nhighmass>0);
+        segregate(star, Nhighmass, 0.0);
+    }
 	
 	return 0;
 }
@@ -4790,7 +4809,7 @@ int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 
 	//Open output files
 	char PARfile[50], NBODYfile[50], SSEfile[50];		
-	FILE *PAR, *NBODY, *SSE12;
+	FILE *PAR, *NBODY, *SSE12=NULL;
 	sprintf(PARfile, "%s.input",output);
 	PAR = fopen(PARfile,"w");
 	sprintf(NBODYfile, "%s.fort.10",output);
@@ -4840,6 +4859,7 @@ int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	//write to .fort.12 file
 	if (sse) {
 		for (j=0;j<N;j++) {
+            assert(SSE12!=NULL);
 			fprintf(SSE12,"%.8lf\t%.0lf %.8lf %.8lf %.8lf\n",star[j][0]*M,star[j][8],star[j][7],star[j][9],star[j][10]);
 			//,star[j][13],star[j][14]);
 		}
@@ -4848,6 +4868,7 @@ int output0(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	fclose(PAR);
 	fclose(NBODY);
 	if (bin == 5) {
+        assert(SSE12!=NULL);
 		fclose(SSE12);
 		printf("\nData written to %s, %s and %s\n", PARfile, NBODYfile, SSEfile);
 	} else {
@@ -4910,7 +4931,7 @@ int output2(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 
 	//Open output files
 	char PARfile[50], NBODYfile[50], SSEfile[50];		
-	FILE *PAR, *NBODY, *SSE12;
+	FILE *PAR, *NBODY, *SSE12=NULL;
 	sprintf(PARfile, "%s.PAR",output);
 	PAR = fopen(PARfile,"w");
 	sprintf(NBODYfile, "%s.NBODY",output);
@@ -4961,6 +4982,7 @@ int output2(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	//write to .fort.12 file
 	if (sse) {
 		for (j=0;j<N;j++) {
+            assert(SSE12!=NULL);
 			fprintf(SSE12,"%.8lf\t%.0lf %.8lf %.8lf %.8lf\n",star[j][0]*M,star[j][8],star[j][7],star[j][9],star[j][10]);
 					//,star[j][13],star[j][14]);
 		}
@@ -4969,6 +4991,7 @@ int output2(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	fclose(PAR);
 	fclose(NBODY);
 	if (bin == 5) {
+        assert(SSE12!=NULL);
 		fclose(SSE12);
 		printf("\nData written to %s, %s and %s\n", PARfile, NBODYfile, SSEfile);
 	} else {
@@ -5061,7 +5084,7 @@ int output4(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	
 	//Open output files
 	char PARfile[50], NBODYfile[50], SSEfile[50];		
-	FILE *PAR, *NBODY, *SSE12;
+	FILE *PAR, *NBODY, *SSE12=NULL;
 	sprintf(PARfile, "%s.input",output);
 	PAR = fopen(PARfile,"w");
 	sprintf(NBODYfile, "%s.fort.10",output);
@@ -5076,7 +5099,7 @@ int output4(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	}		
     double gmin = 1e-6;
     double ecrit = N>1e6?1e-6:1.0/N;
-    double vs = 0.25/N;
+    //double vs = 0.25/N;
     double rmin = pow(gmin/N,0.33333);
     double dtmin = pow(rmin,1.5);
 	
@@ -5114,6 +5137,7 @@ int output4(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	//write to .fort.12 file
 	if (sse) {
 		for (j=0;j<N;j++) {
+            assert(SSE12!=NULL);
 			fprintf(SSE12,"%.8lf\t%.0lf %.8lf %.8lf %.8lf\n",star[j][0]*M,star[j][8],star[j][7],star[j][9],star[j][10]);
 			//,star[j][13],star[j][14]);
 		}
@@ -5122,7 +5146,8 @@ int output4(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	fclose(PAR);
 	fclose(NBODY);
 	if (bin == 5) {
-		fclose(SSE12);
+        assert(SSE12!=NULL);
+        fclose(SSE12);
 		printf("\nData written to %s, %s and %s\n", PARfile, NBODYfile, SSEfile);
 	} else {
 		printf("\nData written to %s and %s\n", PARfile, NBODYfile);
@@ -5136,7 +5161,7 @@ int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 
 	//Open output files
 	char PARfile[50], NBODYfile[50], SSEfile[50];		
-	FILE *PAR, *NBODY, *SSE12;
+	FILE *PAR, *NBODY, *SSE12=NULL;
 	sprintf(PARfile, "%s.input",output);
 	PAR = fopen(PARfile,"w");
 	sprintf(NBODYfile, "%s.dat.10",output);
@@ -5151,7 +5176,7 @@ int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	}		
     double gmin = 1e-6;
     double ecrit = N>1e6?1e-6:1.0/N;
-    double vs = 0.25/N;
+    //double vs = 0.25/N;
     double rmin = pow(gmin/N,0.33333);
     double dtmin = pow(rmin,1.5);
 	
@@ -5191,7 +5216,8 @@ int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	//write to .fort.12 file
 	if (sse) {
 		for (j=0;j<N;j++) {
-			fprintf(SSE12,"%.8lf\t%.0lf %.8lf %.8lf %.8lf\n",star[j][0]*M,star[j][8],star[j][7],star[j][9],star[j][10]);
+            assert(SSE12!=NULL);
+            fprintf(SSE12,"%.8lf\t%.0lf %.8lf %.8lf %.8lf\n",star[j][0]*M,star[j][8],star[j][7],star[j][9],star[j][10]);
 					//,star[j][13],star[j][14]);
 		}
 	}
@@ -5199,6 +5225,7 @@ int output5(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	fclose(PAR);
 	fclose(NBODY);
 	if (bin == 5) {
+        assert(SSE12!=NULL);
 		fclose(SSE12);
 		printf("\nData written to %s, %s and %s\n", PARfile, NBODYfile, SSEfile);
 	} else {
@@ -5293,7 +5320,7 @@ void help(double msort) {
 	printf("                   2= Subr et al. (2007) mass-segregated,            \n");
 	printf("                   3= 2-dimensional EFF/Nuker template,              \n");
 	printf("                   -1= no density gradient)                          \n");
-	printf("       -W <0.2-inf> (W0 parameter for King model)                       \n");
+	printf("       -W <0.2-inf> (W0 parameter for King model)                    \n");
 	printf("       -R <value> (half-mass radius [pc], ignored for P = 3;         \n");
 	printf("                   if -1, use Marks & Kroupa (2012) Mcl-Rh relation) \n");
 	printf("       -r <value> (scale radius of EFF/Nuker template [pc])          \n");
@@ -5320,14 +5347,25 @@ void help(double msort) {
 	printf("                   for L3 IMF use three times for alpha, beta and mu)\n");
 	printf("       -m <value> (IMF mass limits, has to be used multiple times    \n");
 	printf("                 (at least twice), from low mass to high mass [Msun])\n");
-    printf("       -E <value> ( M_ecl/(M_ecl+M_gas), used for IMF option -f 5)   \n");
+    printf("       -F <value> ( M_ecl/(M_ecl+M_gas), used for IMF option -f 5)   \n");
 	printf("       -B <number> (number of binary systems)                        \n");
 	printf("       -b <value> (binary fraction, specify either B or b)           \n");
-	printf("       -p <0|1|2|3> (binary pairing, 0= random, 1= ordered for M>%.1f Msun,\n",msort);
+	printf("       -p <0|1|2|3> (binary mass pairing:                            \n");
+    printf("                   0= random,                                        \n");
+    printf("                   1= ordered for M>%.1f Msun,                       \n",msort);
 	printf("                   2= random but separate pairing for M>%.1f Msun)\n",msort);
 	printf("                   3= random but use period distribution from Sana et al., (2012);\n");
     printf("                      Oh, S., Kroupa, P., & Pflamm-Altenburg, J. (2015)\n");
-    printf("                      for M>%.1f Msun)\n",msort);
+    printf("                      for M>%.1f Msun) (default)\n",msort);
+    printf("       -d <0|1|2|3> (binary semi-major axis distribution for M<%.1f Msun:\n",msort);
+    printf("                    0= flat ranging from amin to amax                \n");
+    printf("                    1= based on Kroupa (1995) period distribution, (default)\n");
+    printf("                    2= based on Duquennoy & Mayor (1991) period distribution,\n");
+    printf("       -k <value>   (semi-major axis limit [pc] for -d=0, used twice [min,max]) \n");
+    printf("       -E <0|1|2>   (binary semi-major axis/eccentricity distribution for M>%.1f Msun:\n",msort);
+    printf("                    0= Same as M<%.1f Msun [option -d]               \n",msort);
+    printf("                    1= Sana & Evans (2011)                           \n");
+    printf("                    2= Sana et al. (2012)                            \n");
 	printf("       -s <number> (seed for randomization; 0= randomize by timer)   \n");
 	printf("       -t <0|1|2|3> (tidal field; 0= no tidal field, 1= near-field,  \n");
 	printf("                    2= point-mass, 3= Milky-Way potential)           \n");

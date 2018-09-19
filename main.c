@@ -189,7 +189,7 @@ int main (int argv, char **argc) {
 
 	//Command line input
 	int option;
-	while ((option = getopt(argv, argc, "N:M:P:W:R:r:c:g:S:D:T:Q:C:A:O:G:o:f:a:m:E:B:b:p:d:s:t:e:Z:X:x:V:u:h:?")) != -1) switch (option)
+	while ((option = getopt(argv, argc, "N:M:P:W:R:r:c:g:S:D:T:Q:C:A:O:G:o:f:a:m:F:B:b:p:d:E:k:s:t:e:Z:X:x:V:u:h:?")) != -1) switch (option)
 	{
 		case 'N': N = atoi(optarg); Mcl = 0.0; break;
 		case 'M': Mcl = atof(optarg); N = 0; break;
@@ -234,12 +234,14 @@ int main (int argv, char **argc) {
         case 'd': adis = atoi(optarg); break;
         case 'k':
             if (kn == 0) {
-                amin = atof(optarg); break;
+                amin = atof(optarg); 
                 kn++;
+                break;
             }
             else if(kn == 1) {
-                amax = atof(optarg); break;
+                amax = atof(optarg); 
                 kn++;
+                break;
             }
             else {printf("\nError: Number of semi-major axis limits should be call only twice\n"); return 1; }
         case 'E': OBperiods =atoi(optarg); break;
@@ -825,7 +827,7 @@ int main (int argv, char **argc) {
 		printf("\nRe-scaling of orbits (dt ~ N^2!)\n");
 		double ke = 0.0;
 		double pe = 0.0;
-		double sx, sv, r2;
+		double sx, sv;
 #ifdef GPU
 		gpupot(N,star,&pe);
 #ifndef NOOMP
@@ -841,6 +843,7 @@ int main (int argv, char **argc) {
 #endif
         //		printf("PE_GPU %lg ke %lg\n",pe,ke);
 #else
+        double r2;        
 #ifndef NOOMP	
 #pragma omp parallel shared(N, star)  private(i, j, r2)
 		{
@@ -892,7 +895,7 @@ int main (int argv, char **argc) {
 		printf("\nRe-scaling of orbits (dt ~ N^2!)\n");
 		double pe = 0.0;
 		double ke = 0.0;
-		double r2, vscale;
+		double vscale;
 #ifdef GPU
 		gpupot(N,star,&pe);
 #ifndef NOOMP
@@ -907,7 +910,8 @@ int main (int argv, char **argc) {
 		}
 #endif
         //		printf("PE_GPU %lg ke %lg\n",pe,ke);
-#else        
+#else
+        double r2;
 #ifndef NOOMP
 #pragma omp parallel shared(N, star)  private(i, j, r2)
 		{

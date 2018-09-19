@@ -448,6 +448,9 @@ int main (int argv, char **argc) {
 				submass[i] = norm[i] * subint(mlim[i], mlim[i+1], alpha[i] + 2.);
 				M_tmp += submass[i];
 			}
+            printf("\n Mass function: \n");
+            for (i = 0; i<an; i++) 
+                printf("\n alpha[%d] = %f for %f < m < %f", i, alpha[i],mlim[i],mlim[i+1]);
 			generate_m2(an, mlim, alpha, Mcl, M_tmp, subcount, &N, &mmean, &M, star, MMAX, NMAX, epoch, Z, Rh, remnant);
 		}
  	} else if (mfunc == 3) {
@@ -476,10 +479,13 @@ int main (int argv, char **argc) {
 		double density = 0.5*Mcl/(4.0/3.0*PI*Rh*Rh*Rh)/ep4;
 		FeH = log10(Z/Zsun)/0.977;
 		// use Marks & Kroupa (2012) formula 15         
-		alpha[0] = -(2.3 + 0.5*FeH);
-		alpha[1] = -(2.35 + 0.5*FeH);
+		//alpha[0] = -(1.3 + 0.5*FeH);
+		//alpha[1] = -(2.3 + 0.5*FeH);
+		alpha[0] = -1.3;
+		alpha[1] = -2.3;
 		alpha[2] = - (0.0572 * FeH - 0.4072*log10(density*1e-6)+1.9383);
-		if(alpha[3]<-2.35) alpha[3] = -2.35;
+		if(alpha[2]<-2.3) alpha[2] = -2.3;
+		//alpha[2] = -1.34;
 		alpha[3] = alpha[4] = 0.0;
 
 		an = 3;

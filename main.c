@@ -3748,7 +3748,10 @@ int get_binaries(int nbin, double **star, double M, double rvir, int pairing, in
 			//m1old = m1;
 			//m2old = m2;
 			if (eigen) {
-				if (!i) printf("\nApplying Kroupa (1995) eigenevolution for short-period binaries\n");
+				if (!i) {
+                    if (eigen==1) printf("\nApplying Kroupa (1995) eigenevolution for short-period binaries\n");
+                    else if(eigen==2) printf("\nApplying Kroupa (1995) eigenevolution & Belloni et al. (2017) for short-period binaries\n");
+                }
 				m1*=M;//temporary re-scaling
 				m2*=M;
 				abin*=rvir;
@@ -5358,18 +5361,17 @@ void help(double msort) {
     printf("                   0= random,                                        \n");
     printf("                   1= ordered for M>%.1f Msun,                       \n",msort);
 	printf("                   2= random but separate pairing for M>%.1f Msun)\n",msort);
-	printf("                   3= random but use period distribution from Sana et al., (2012);\n");
-    printf("                      Oh, S., Kroupa, P., & Pflamm-Altenburg, J. (2015)\n");
-    printf("                      for M>%.1f Msun) (default)\n",msort);
+	printf("                   3= random but use uniform (0.1-1.0) distribution  \n");
+    printf("                      from Sana et al., (2012) for M>%.1f Msun) (default)\n",msort);
     printf("       -d <0|1|2|3> (binary semi-major axis distribution for M<%.1f Msun:\n",msort);
-    printf("                    0= flat ranging from amin to amax                \n");
+    printf("                    0= flat ranging from amin to amax (use -k twice) \n");
     printf("                    1= based on Kroupa (1995) period distribution, (default)\n");
-    printf("                    2= based on Duquennoy & Mayor (1991) period distribution,\n");
+    printf("                    2= based on Duquennoy & Mayor (1991) period distribution\n");
     printf("       -k <value>   (semi-major axis limit [pc] for -d=0, used twice [min,max]) \n");
     printf("       -E <0|1|2>   (binary semi-major axis/eccentricity distribution for M>%.1f Msun:\n",msort);
     printf("                    0= Same as M<%.1f Msun [option -d]               \n",msort);
     printf("                    1= Sana & Evans (2011)                           \n");
-    printf("                    2= Sana et al. (2012)                            \n");
+    printf("                    2= Sana et al. (2012) (default)                  \n");
 	printf("       -s <number> (seed for randomization; 0= randomize by timer)   \n");
 	printf("       -t <0|1|2|3> (tidal field; 0= no tidal field, 1= near-field,  \n");
 	printf("                    2= point-mass, 3= Milky-Way potential)           \n");

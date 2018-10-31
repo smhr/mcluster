@@ -526,8 +526,9 @@ int main (int argv, char **argc) {
 		}
 		generate_m2(an, mlim, alpha, Mcl, M_tmp, subcount, &N, &mmean, &M, star, MMAX, NMAX, epoch, Z, Rh, remnant);
 	} else {
-		printf("\nSetting stellar masses to %.1f solar mass\n", single_mass);
 		if (!N) N = Mcl/single_mass;
+        else single_mass = Mcl/N;
+		printf("\nSetting stellar masses to %.1f solar mass\n", single_mass);
 		for (j=0;j<N;j++) {
 			star[j][0] = single_mass;
 			star[j][7] = single_mass;
@@ -5345,7 +5346,7 @@ void help(double msort) {
 	printf("       -O <value> (deltat in N-body units)                           \n");
 	printf("       -G <0|1> (GPU usage; 0= no GPU, 1= use GPU)                   \n");
 	printf("       -o <name> (output name of cluster model)                      \n");
-	printf("       -f <0|1|2|3|4> (IMF; 0= no IMF, 1= Kroupa (2001),             \n");
+	printf("       -f <0|1|2|3|4> (IMF; 0= no IMF, mass = M/N, 1= Kroupa (2001), \n");
 	printf("            2= user defined, 3= Kroupa (2001) with optimal sampling, \n");
 	printf("            4= L3 IMF (Maschberger 2012))                            \n");
     printf("            5= alpha3 depending on environment (Marks & Kroupa 2012))\n");

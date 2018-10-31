@@ -16,6 +16,12 @@ Kuepper A.H.W., Maschberger T., Kroupa P., Baumgardt H., 2011, MNRAS, 417, 2300
 This reference should be used for any publications that
 utilize McLuster.
 
+******************************************
+This forked version is different from the original version of mcluster.
+A few updates are described in the paper:
+Wang, Long; Kroupa, Pavel; Jerabkova, Tereza, 2018, MNARS
+https://academic.oup.com/mnras/advance-article-abstract/doi/10.1093/mnras/sty2232/5077251?redirectedFrom=fulltext 
+
 For comments, questions and bug reports contact:
 ahwkuepper@gmail.com
 **************************************************************

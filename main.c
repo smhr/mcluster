@@ -447,10 +447,21 @@ int main (int argv, char **argc) {
 			single_mass = mlim[0];
 			printf("\nSetting stellar masses to %g solar mass\n",single_mass);
 			if (!N) N = Mcl/single_mass;
-			for (j=0;j<N;j++) star[j][0] = 1.0/N;
+			for (j=0;j<N;j++) {
+                star[j][0] = single_mass;
+                star[j][7] = single_mass;
+                star[j][8] = 0;
+                star[j][9] = 0.0;
+                star[j][10] = 0.0;
+                star[j][11] = 0.0;
+                star[j][12] = 0.0;
+                star[j][13] = 0.0;
+                star[j][14] = 0.0;
+            }
 			mmean = single_mass;
 			M = N*mmean;
 			printf("\nM = %g\n", M);
+            mloss = 0;
 		}	else {
 			printf("\nMaximum stellar mass set to: %.2f\n",MMAX);
 			norm[an-1] = 1.; //normalization factor of integral
@@ -527,7 +538,6 @@ int main (int argv, char **argc) {
 		generate_m2(an, mlim, alpha, Mcl, M_tmp, subcount, &N, &mmean, &M, star, MMAX, NMAX, epoch, Z, Rh, remnant);
 	} else {
 		if (!N) N = Mcl/single_mass;
-        else single_mass = Mcl/N;
 		printf("\nSetting stellar masses to %.1f solar mass\n", single_mass);
 		for (j=0;j<N;j++) {
 			star[j][0] = single_mass;
@@ -5346,15 +5356,17 @@ void help(double msort) {
 	printf("       -O <value> (deltat in N-body units)                           \n");
 	printf("       -G <0|1> (GPU usage; 0= no GPU, 1= use GPU)                   \n");
 	printf("       -o <name> (output name of cluster model)                      \n");
-	printf("       -f <0|1|2|3|4> (IMF; 0= no IMF, mass = M/N, 1= Kroupa (2001), \n");
-	printf("            2= user defined, 3= Kroupa (2001) with optimal sampling, \n");
+	printf("       -f <0|1|2|3|4> (IMF; 0= no IMF, mass is set to 1,             \n");
+    printf("            1= Kroupa (2001),                                        \n");
+	printf("            2= user defined with -m & -a,                            \n");
+    printf("            3= Kroupa (2001) with optimal sampling,                  \n");
 	printf("            4= L3 IMF (Maschberger 2012))                            \n");
     printf("            5= alpha3 depending on environment (Marks & Kroupa 2012))\n");
 	printf("       -a <value> (IMF slope; for user defined IMF, may be used      \n"); 
 	printf("                   multiple times, from low mass to high mass;       \n");
 	printf("                   for L3 IMF use three times for alpha, beta and mu)\n");
-	printf("       -m <value> (IMF mass limits, has to be used multiple times    \n");
-	printf("                 (at least twice), from low mass to high mass [Msun])\n");
+	printf("       -m <value> (IMF mass limits, for equal mass case, used once;   \n");
+    printf("                   for IMF, used multiple times to set boundary from low mass to high mass [Msun])\n");
     printf("       -F <value> ( M_ecl/(M_ecl+M_gas), used for IMF option -f 5)   \n");
 	printf("       -B <number> (number of binary systems)                        \n");
 	printf("       -b <value> (binary fraction, specify either B or b)           \n");
@@ -5375,7 +5387,7 @@ void help(double msort) {
     printf("                    2= Sana et al. (2012) (default)                  \n");
 	printf("       -s <number> (seed for randomization; 0= randomize by timer)   \n");
 	printf("       -t <0|1|2|3> (tidal field; 0= no tidal field, 1= near-field,  \n");
-	printf("                    2= point-mass, 3= Milky-Way potential)           \n");
+	printf("                    2= point-mass, 3= Milky-Way potential(+gas potential)), 4= Gas potential \n");
 	printf("       -e <value> (epoch for stellar evolution [Myr])                \n");
 	printf("       -Z <value> (metallicity [0.0001-0.03, 0.02 = solar])          \n");
 	printf("       -X <value> (galactocentric radius vector, use 3x, [pc])       \n");

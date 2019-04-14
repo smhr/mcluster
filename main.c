@@ -83,7 +83,7 @@ int main (int argv, char **argc) {
 	double VG[3] = {0.0,220.0,0.0};  //Initial velocity of the cluster [km/s]
 	
 	//Mass function parameters
-	int mfunc = 1;					//0 = single mass stars; 1 = use Kroupa (2001) mass function; 2 = use multi power law (based on mufu.c by L.Subr); 3 = optimal sampling; 4 L3 IMF (Naschberger 2012); 5 Varying alpha3 based on metellicity and density (Marks & Kroupa 2012);
+	int mfunc = 1;					//0 = single mass stars; 1 = use Kroupa (2001) mass function; 2 = use multi power law ; 3 = optimal sampling; 4 L3 IMF (Naschberger 2012); 5 Varying alpha3 based on metellicity and density (Marks & Kroupa 2012); 6 Multi component systems (set in -m, a few times)
 	double single_mass = 1.0;		//Stellar mass in case of single-mass cluster 
 	double mlow = 0.08;				//Lower mass limit for mfunc = 1 & mfunc = 4
 	double mup = 150.0;				//Upper mass limit for mfunc = 1 & mfunc = 4
@@ -536,7 +536,46 @@ int main (int argv, char **argc) {
 		  M_tmp += submass[i];
 		}
 		generate_m2(an, mlim, alpha, Mcl, M_tmp, subcount, &N, &mmean, &M, star, MMAX, NMAX, epoch, Z, Rh, remnant);
-	} else {
+	} else if (mfunc == 6) {
+        assert(an==mn);
+        printf("\nSetting multiple component systems\n");
+        mmean = 0.0;
+        for (j=0;j<an;j++) {
+            mmean += mlim[j]*alpha[j];
+        }
+        if (!N) {
+            N = Mcl/single_mass;
+            printf("\nTotal number of stars: %d\n",N);
+        }
+        int noffset[an+1];
+        noffset[0] = 0;
+        for (j=0;j<an;j++) {
+            noffset[j+1] = noffset[j] + N*alpha[j];
+            assert(noffset[j]<N);
+        }
+        noffset[an] = N;
+
+        for (j=0;j<an;j++) {
+            printf("\n mass %g, fraction %g, number %d\n", mlim[j], alpha[j], noffset[j+1]-noffset[j]);
+        }
+        int k;
+        for (k=0;k<an;k++) {
+            for (j=noffset[k];j<noffset[k+1];j++) {
+                star[j][0] = mlim[k];
+                star[j][7] = mlim[k];
+                star[j][8] = 0;
+                star[j][9] = 0.0;
+                star[j][10] = 0.0;
+                star[j][11] = 0.0;
+                star[j][12] = 0.0;
+                star[j][13] = 0.0;
+                star[j][14] = 0.0;
+            }
+        }
+		M = N*mmean;
+		printf("\nM = %g\n", M);
+		mloss = 0;
+    } else {
 		if (!N) N = Mcl/single_mass;
 		printf("\nSetting stellar masses to %.1f solar mass\n", single_mass);
 		for (j=0;j<N;j++) {
@@ -5362,11 +5401,16 @@ void help(double msort) {
     printf("            3= Kroupa (2001) with optimal sampling,                  \n");
 	printf("            4= L3 IMF (Maschberger 2012))                            \n");
     printf("            5= alpha3 depending on environment (Marks & Kroupa 2012))\n");
-	printf("       -a <value> (IMF slope; for user defined IMF, may be used      \n"); 
-	printf("                   multiple times, from low mass to high mass;       \n");
-	printf("                   for L3 IMF use three times for alpha, beta and mu)\n");
-	printf("       -m <value> (IMF mass limits, for equal mass case, used once;   \n");
-    printf("                   for IMF, used multiple times to set boundary from low mass to high mass [Msun])\n");
+    printf("            6= Multiple components with -m & -a                      \n");
+	printf("       -a <value> (-f=2: IMF slope for user defined IMF, used multiple times\n");
+    printf("                         from low mass to high mass; \n");
+	printf("                   -f=4: For L3 IMF, use three times for alpha, beta and mu)\n");
+	printf("                   -f=6: For multiple components, the fraction of different masses,\n");
+    printf("                         used several times (same times as -m), the total summation should be 1.0)\n");
+	printf("       -m <value> (IMF mass limits:                                  \n");
+    printf("                   -f=2: Power-law IMF, used multiple times to set boundary \n");
+    printf("                         from low mass to high mass [Msun])\n");
+    printf("                   -f=6: Multiple-component, used mutiple times to set component masses;\n");
     printf("       -F <value> ( M_ecl/(M_ecl+M_gas), used for IMF option -f 5)   \n");
 	printf("       -B <number> (number of binary systems)                        \n");
 	printf("       -b <value> (binary fraction, specify either B or b)           \n");

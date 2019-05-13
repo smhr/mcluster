@@ -1,13 +1,13 @@
 //Constants
-//#define G 0.0043009211 //in pc*km^2*s^-2*Msun^-1
-#define G 0.00449850214  //in pc*km^2*s^-2*Msun^-1 consistent with IAU2009 SAC
+#define G 0.00430091733 //in pc*km^2*s^-2*Msun^-1
+//#define G 0.00449850214  //in pc*km^2*s^-2*Msun^-1 consistent with IAU2009 SAC
 #define Pi 3.14159265
 #define PI 3.14159265
 #define TWOPI 6.2831853   /* 2PI */
 #define GNBODY 1.0
 #define MNBODY 1.0
 #define PARSEC  3.0856776E13      /* KM pro PC */
-#define GBIN    1.327126E11     /* G in (km/sec)^3/Msun */
+#define GBIN    1.32712442099E11     /* G in (km/sec)^3/Msun */
 #define RSUN    6.957E5       /* Solar radius in km */
 
 //Functions

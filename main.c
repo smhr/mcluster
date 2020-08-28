@@ -4782,9 +4782,9 @@ int radial_profile(double **star, int N, double rvir, double M, int create_radia
 		if (*NNBMAX < 30) *NNBMAX = 30;
 		if (N<=*NNBMAX) *NNBMAX = 0.5*N;
 		if (*NNBMAX > NNBMAX_NBODY6) *NNBMAX = NNBMAX_NBODY6;
-		if (S>=0.9) {
-		  *NNBMAX = *NNBMAX-100; // reduce NNBMAX
-		}
+	//	if (S>=0.9) {
+	//	  *NNBMAX = *NNBMAX-100; // reduce NNBMAX
+	//	}
 		*RS0 = rarray[*NNBMAX][0];
 		printf("\nEstimating appropriate NNBMAX = %i and RS0 = %f [pc]\n",*NNBMAX,*RS0);
 	}
@@ -5307,7 +5307,7 @@ int output6(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 
 	//Open output files
 	char PARfile[50], NBODYfile[50], SSEfile[50];
-	FILE *PAR, *NBODY, *SSE12;
+	FILE *PAR, *NBODY, *SSE12=NULL;
 	sprintf(PARfile, "%s.input",output);
 	PAR = fopen(PARfile,"w");
 	sprintf(NBODYfile, "%s.fort.10",output);
@@ -5346,6 +5346,7 @@ int output6(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	//write to .fort.12 file
 	if (sse) {
 		for (j=0;j<N;j++) {
+            assert(SSE12!=NULL);
 			fprintf(SSE12,"%.8lf\t%.0lf %.8lf %.8lf %.8lf\n",star[j][0]*M,star[j][8],star[j][7],star[j][9],star[j][10]);
 			//,star[j][13],star[j][14]);
 		}
@@ -5354,6 +5355,7 @@ int output6(char *output, int N, int NNBMAX, double RS0, double dtadj, double dt
 	fclose(PAR);
 	fclose(NBODY);
 	if (bin == 5) {
+        assert(SSE12!=NULL);
 		fclose(SSE12);
 		printf("\nData written to %s, %s and %s\n", PARfile, NBODYfile, SSEfile);
 	} else {
